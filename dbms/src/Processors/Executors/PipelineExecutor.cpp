@@ -316,6 +316,14 @@ bool PipelineExecutor::prepareProcessor(UInt64 pid, Stack & children, Stack & pa
 
             async_pool->schedule([&, state = node.execution_state.get()]()
             {
+                if (thread_group)
+                    CurrentThread::attachTo(thread_group);
+
+                SCOPE_EXIT(
+                        if (thread_group)
+                            CurrentThread::detachQueryIfNotDetached();
+                );
+
                 state->job();
 
                 std::lock_guard lock(task_queue_mutex);
@@ -592,6 +600,15 @@ void PipelineExecutor::executeImpl(size_t num_threads)
 
     addChildlessProcessorsToStack(stack);
 
+    ThreadPool pool(num_threads);
+    async_pool = std::make_unique<ThreadPool>(num_threads, num_threads, 0);
+
+    SCOPE_EXIT(
+            finish();
+            pool.wait();
+            async_pool->wait();
+    );
+
     while (!stack.empty())
     {
         UInt64 proc = stack.top();
@@ -604,20 +621,11 @@ void PipelineExecutor::executeImpl(size_t num_threads)
         }
     }
 
-    ThreadPool pool(num_threads);
-    async_pool = std::make_unique<ThreadPool>(num_threads, num_threads, 0);
-
-    SCOPE_EXIT(
-            finish();
-            pool.wait();
-            async_pool->wait();
-    );
-
-    auto thread_group = CurrentThread::getGroup();
+    thread_group = CurrentThread::getGroup();
 
     for (size_t i = 0; i < num_threads; ++i)
     {
-        pool.schedule([this, thread_group, thread_num = i, num_threads]
+        pool.schedule([this, thread_num = i, num_threads]
         {
             /// ThreadStatus thread_status;
 

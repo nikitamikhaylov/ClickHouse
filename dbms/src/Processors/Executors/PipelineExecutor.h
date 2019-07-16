@@ -164,6 +164,7 @@ private:
     std::vector<std::unique_ptr<ExecutorContext>> executor_contexts;
 
     std::unique_ptr<ThreadPool> async_pool;
+    ThreadGroupStatusPtr thread_group;
 
     /// Processor ptr -> node number
     using ProcessorsMap = std::unordered_map<const IProcessor *, UInt64>;
