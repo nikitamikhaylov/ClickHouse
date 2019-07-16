@@ -136,6 +136,7 @@ private:
 
     /// Num threads waiting condvar. Last thread finish execution if task_queue is empty.
     size_t num_waiting_threads = 0;
+    size_t num_tasks_in_async_pool = 0;
 
     /// Things to stop execution to expand pipeline.
     struct ExpandPipelineTask

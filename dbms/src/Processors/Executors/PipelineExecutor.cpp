@@ -314,7 +314,13 @@ bool PipelineExecutor::prepareProcessor(UInt64 pid, Stack & children, Stack & pa
             node.status = ExecStatus::Executing;
             addJob(node.execution_state.get(), true);
 
-            async_pool->schedule([&, state = node.execution_state.get()]()
+            std::lock_guard lock(task_queue_mutex);
+
+            /// Have to take lock to increment this variable.
+            /// Cant't make it atomic because of spurious wakeup.
+            ++num_tasks_in_async_pool;
+
+            async_pool->schedule([this, state = node.execution_state.get()]()
             {
                 if (thread_group)
                     CurrentThread::attachTo(thread_group);
@@ -326,8 +332,12 @@ bool PipelineExecutor::prepareProcessor(UInt64 pid, Stack & children, Stack & pa
 
                 state->job();
 
-                std::lock_guard lock(task_queue_mutex);
-                task_queue.push(state);
+                {
+                    std::lock_guard lock_(task_queue_mutex);
+                    task_queue.push(state);
+                    --num_tasks_in_async_pool;
+                }
+                task_queue_condvar.notify_one();
             });
 
             break;
@@ -488,7 +498,7 @@ void PipelineExecutor::executeSingleThread(size_t thread_num, size_t num_threads
 
             ++num_waiting_threads;
 
-            if (num_waiting_threads == num_threads)
+            if (num_waiting_threads == num_threads && num_tasks_in_async_pool == 0)
             {
                 finished = true;
                 lock.unlock();
