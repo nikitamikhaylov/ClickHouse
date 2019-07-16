@@ -612,7 +612,7 @@ void PipelineExecutor::executeImpl(size_t num_threads)
     for (size_t i = 0; i < num_threads; ++i)
         executor_contexts.emplace_back(std::make_unique<ExecutorContext>());
 
-    addChildlessProcessorsToStack(stack);
+    thread_group = CurrentThread::getGroup();
 
     ThreadPool pool(num_threads);
     async_pool = std::make_unique<ThreadPool>(num_threads, num_threads, 0);
@@ -622,6 +622,8 @@ void PipelineExecutor::executeImpl(size_t num_threads)
             pool.wait();
             async_pool->wait();
     );
+
+    addChildlessProcessorsToStack(stack);
 
     while (!stack.empty())
     {
@@ -634,8 +636,6 @@ void PipelineExecutor::executeImpl(size_t num_threads)
             task_queue.push(cur_state);
         }
     }
-
-    thread_group = CurrentThread::getGroup();
 
     for (size_t i = 0; i < num_threads; ++i)
     {
