@@ -127,14 +127,14 @@ def main():
     num_int_tests = len(VALUES) ** 2
 
     if 'int1' in sys.argv[1:]:
-        for (v1, v2) in itertools.combinations(VALUES, 2)[:num_int_tests/2]:
+        for (v1, v2) in itertools.islice(itertools.combinations(VALUES, 2), None, num_int_tests / 2):
             q, a = test_pair(v1, v2)
             if GENERATE_TEST_FILES:
                 sql_file.write(q + ";\n")
                 ref_file.write(a + "\n")
 
     if 'int2' in sys.argv[1:]:
-        for (v1, v2) in itertools.combinations(VALUES, 2)[num_int_tests/2:]:
+        for (v1, v2) in itertools.islice(itertools.combinations(VALUES, 2), num_int_tests / 2, None):
             q, a = test_pair(v1, v2)
             if GENERATE_TEST_FILES:
                 sql_file.write(q + ";\n")
