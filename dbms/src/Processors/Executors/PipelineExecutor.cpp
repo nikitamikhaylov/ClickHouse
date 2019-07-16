@@ -619,14 +619,18 @@ void PipelineExecutor::executeImpl(size_t num_threads)
     threads.reserve(num_threads);
 
     async_pool = std::make_unique<ThreadPool>(num_threads, num_threads, 0);
+    bool finished_flag = false;
 
     SCOPE_EXIT(
-            finish();
+            if (finished_flag)
+            {
+                finish();
 
-            for (auto & thread : threads)
-                thread.join();
+                for (auto & thread : threads)
+                    thread.join();
 
-            async_pool->wait();
+                async_pool->wait();
+            }
     );
 
     addChildlessProcessorsToStack(stack);
@@ -664,6 +668,13 @@ void PipelineExecutor::executeImpl(size_t num_threads)
             executeSingleThread(thread_num, num_threads);
         });
     }
+
+    for (auto & thread : threads)
+        thread.join();
+
+    async_pool->wait();
+
+    finished_flag = true;
 }
 
 String PipelineExecutor::dumpPipeline() const
