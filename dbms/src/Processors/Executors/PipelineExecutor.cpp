@@ -622,7 +622,7 @@ void PipelineExecutor::executeImpl(size_t num_threads)
     bool finished_flag = false;
 
     SCOPE_EXIT(
-            if (finished_flag)
+            if (!finished_flag)
             {
                 finish();
 
