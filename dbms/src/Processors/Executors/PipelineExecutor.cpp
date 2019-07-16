@@ -149,7 +149,7 @@ static void executeJob(IProcessor * processor)
     }
 }
 
-void PipelineExecutor::addJob(ExecutionState * execution_state)
+void PipelineExecutor::addJob(ExecutionState * execution_state, bool async)
 {
     auto job = [execution_state]()
     {
@@ -168,6 +168,7 @@ void PipelineExecutor::addJob(ExecutionState * execution_state)
     };
 
     execution_state->job = std::move(job);
+    execution_state->async = async;
 }
 
 void PipelineExecutor::expandPipeline(Stack & stack, UInt64 pid)
@@ -310,11 +311,18 @@ bool PipelineExecutor::prepareProcessor(UInt64 pid, Stack & children, Stack & pa
         }
         case IProcessor::Status::Async:
         {
-            throw Exception("Async is temporary not supported.", ErrorCodes::LOGICAL_ERROR);
+            node.status = ExecStatus::Executing;
+            addJob(node.execution_state.get(), true);
 
-//            node.status = ExecStatus::Executing;
-//            addAsyncJob(pid);
-//            break;
+            async_pool->schedule([&, state = node.execution_state.get()]()
+            {
+                state->job();
+
+                std::lock_guard lock(task_queue_mutex);
+                task_queue.push(state);
+            });
+
+            break;
         }
         case IProcessor::Status::Wait:
         {
@@ -496,12 +504,17 @@ void PipelineExecutor::executeSingleThread(size_t thread_num, size_t num_threads
             if (finished)
                 break;
 
-            addJob(state);
-
+            /// If state has async flag, it was already executed in async pool.
+            /// Will only need to prepare it.
+            if (!state->async)
             {
-                Stopwatch execution_time_watch;
-                state->job();
-                execution_time_ns += execution_time_watch.elapsed();
+                addJob(state, false);
+
+                {
+                    Stopwatch execution_time_watch;
+                    state->job();
+                    execution_time_ns += execution_time_watch.elapsed();
+                }
             }
 
             if (state->exception)
@@ -592,10 +605,12 @@ void PipelineExecutor::executeImpl(size_t num_threads)
     }
 
     ThreadPool pool(num_threads);
+    async_pool = std::make_unique<ThreadPool>(num_threads, num_threads, 0);
 
     SCOPE_EXIT(
             finish();
-            pool.wait()
+            pool.wait();
+            async_pool->wait();
     );
 
     auto thread_group = CurrentThread::getGroup();

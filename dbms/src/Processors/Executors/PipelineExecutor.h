@@ -74,6 +74,7 @@ private:
     {
         std::exception_ptr exception;
         std::function<void()> job;
+        bool async = false;
 
         IProcessor * processor;
         UInt64 processors_id;
@@ -162,6 +163,8 @@ private:
 
     std::vector<std::unique_ptr<ExecutorContext>> executor_contexts;
 
+    std::unique_ptr<ThreadPool> async_pool;
+
     /// Processor ptr -> node number
     using ProcessorsMap = std::unordered_map<const IProcessor *, UInt64>;
     ProcessorsMap processors_map;
@@ -174,8 +177,7 @@ private:
     /// Pipeline execution related methods.
     void addChildlessProcessorsToStack(Stack & stack);
     bool tryAddProcessorToStackIfUpdated(Edge & edge, Stack & stack);
-    static void addJob(ExecutionState * execution_state);
-    // TODO: void addAsyncJob(UInt64 pid);
+    static void addJob(ExecutionState * execution_state, bool async);
 
     /// Prepare processor with pid number.
     /// Check parents and children of current processor and push them to stacks if they also need to be prepared.

@@ -6,8 +6,8 @@
 namespace DB
 {
 
-SourceFromInputStream::SourceFromInputStream(BlockInputStreamPtr stream_, bool force_add_aggregating_info)
-    : ISource(stream_->getHeader())
+SourceFromInputStream::SourceFromInputStream(BlockInputStreamPtr stream_, bool force_add_aggregating_info, bool async)
+    : ISource(stream_->getHeader(), async)
     , force_add_aggregating_info(force_add_aggregating_info)
     , stream(std::move(stream_))
 {
