@@ -314,11 +314,13 @@ bool PipelineExecutor::prepareProcessor(UInt64 pid, Stack & children, Stack & pa
             node.status = ExecStatus::Async;
             addJob(node.execution_state.get(), true);
 
-            std::lock_guard lock(task_queue_mutex);
+            {
+                std::lock_guard lock(task_queue_mutex);
 
-            /// Have to take lock to increment this variable.
-            /// Cant't make it atomic because of spurious wakeup.
-            ++num_tasks_in_async_pool;
+                /// Have to take lock to increment this variable.
+                /// Cant't make it atomic because of spurious wakeup.
+                ++num_tasks_in_async_pool;
+            }
 
             async_pool->schedule([this, state = node.execution_state.get()]()
             {
@@ -333,7 +335,7 @@ bool PipelineExecutor::prepareProcessor(UInt64 pid, Stack & children, Stack & pa
                 state->job();
 
                 {
-                    std::lock_guard lock_(task_queue_mutex);
+                    std::lock_guard lock(task_queue_mutex);
                     task_queue.push(state);
                     --num_tasks_in_async_pool;
                 }
