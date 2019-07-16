@@ -625,15 +625,19 @@ void PipelineExecutor::executeImpl(size_t num_threads)
 
     addChildlessProcessorsToStack(stack);
 
-    while (!stack.empty())
     {
-        UInt64 proc = stack.top();
-        stack.pop();
+        std::lock_guard lock(task_queue_mutex);
 
-        if (prepareProcessor(proc, stack, stack, 0, false))
+        while (!stack.empty())
         {
-            auto cur_state = graph[proc].execution_state.get();
-            task_queue.push(cur_state);
+            UInt64 proc = stack.top();
+            stack.pop();
+
+            if (prepareProcessor(proc, stack, stack, 0, false))
+            {
+                auto cur_state = graph[proc].execution_state.get();
+                task_queue.push(cur_state);
+            }
         }
     }
 
