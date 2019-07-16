@@ -311,7 +311,7 @@ bool PipelineExecutor::prepareProcessor(UInt64 pid, Stack & children, Stack & pa
         }
         case IProcessor::Status::Async:
         {
-            node.status = ExecStatus::Executing;
+            node.status = ExecStatus::Async;
             addJob(node.execution_state.get(), true);
 
             std::lock_guard lock(task_queue_mutex);
