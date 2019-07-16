@@ -614,12 +614,18 @@ void PipelineExecutor::executeImpl(size_t num_threads)
 
     thread_group = CurrentThread::getGroup();
 
-    ThreadPool pool(num_threads);
+    using ThreadsData = std::vector<ThreadFromGlobalPool>;
+    ThreadsData threads;
+    threads.reserve(num_threads);
+
     async_pool = std::make_unique<ThreadPool>(num_threads, num_threads, 0);
 
     SCOPE_EXIT(
             finish();
-            pool.wait();
+
+            for (auto & thread : threads)
+                thread.join();
+
             async_pool->wait();
     );
 
@@ -643,7 +649,7 @@ void PipelineExecutor::executeImpl(size_t num_threads)
 
     for (size_t i = 0; i < num_threads; ++i)
     {
-        pool.schedule([this, thread_num = i, num_threads]
+        threads.emplace_back([this, thread_num = i, num_threads]
         {
             /// ThreadStatus thread_status;
 
@@ -658,8 +664,6 @@ void PipelineExecutor::executeImpl(size_t num_threads)
             executeSingleThread(thread_num, num_threads);
         });
     }
-
-    pool.wait();
 }
 
 String PipelineExecutor::dumpPipeline() const
