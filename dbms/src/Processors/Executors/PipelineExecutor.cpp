@@ -536,6 +536,8 @@ void PipelineExecutor::executeSingleThread(size_t thread_num, size_t num_threads
                     execution_time_ns += execution_time_watch.elapsed();
                 }
             }
+            else
+                state->async = false;
 
             if (state->exception)
                 finish();
