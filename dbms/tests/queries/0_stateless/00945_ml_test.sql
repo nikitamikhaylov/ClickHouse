@@ -1,5 +1,7 @@
-DROP TABLE IF EXISTS defaults;
-CREATE TABLE IF NOT EXISTS defaults
+SET input_format_parallel_parsing=0;
+CREATE DATABASE IF NOT EXISTS test;
+DROP TABLE IF EXISTS test.defaults;
+CREATE TABLE IF NOT EXISTS test.defaults
 (
     param1 Float64,
     param2 Float64,

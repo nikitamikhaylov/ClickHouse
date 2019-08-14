@@ -1,3 +1,4 @@
+SET input_format_parallel_parsing=0;
 DROP TABLE IF EXISTS decimal;
 
 CREATE TABLE IF NOT EXISTS decimal

@@ -1,3 +1,5 @@
+SET input_format_parallel_parsing=0;
+
 SELECT '----- NULL value -----';
 
 SELECT NULL;

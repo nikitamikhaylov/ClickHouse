@@ -1,3 +1,4 @@
+SET input_format_parallel_parsing=0;
 drop table if exists X;
 drop table if exists Y;
 

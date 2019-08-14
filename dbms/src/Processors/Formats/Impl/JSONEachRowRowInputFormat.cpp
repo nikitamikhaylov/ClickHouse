@@ -267,4 +267,69 @@ void registerInputFormatProcessorJSONEachRow(FormatFactory & factory)
     });
 }
 
+void registerFileSegmentationEngineJSONEachRow(FormatFactory & factory)
+{
+    factory.registerFileSegmentationEngine("JSONEachRow", [](
+        ReadBuffer & in,
+        DB::Memory<> & memory,
+        size_t min_chunk_size)
+    {
+        skipWhitespaceIfAny(in);
+        char * begin_pos = in.position();
+        size_t balance = 0;
+        bool quotes = false;
+        memory.resize(0);
+        while (!eofWithSavingBufferState(in, memory, begin_pos)
+                && (balance || memory.size() + static_cast<size_t>(in.position() - begin_pos) < min_chunk_size))
+        {
+            if (quotes)
+            {
+                in.position() = find_first_symbols<'\\', '"'>(in.position(), in.buffer().end());
+                if (in.position() == in.buffer().end())
+                    continue;
+                if (*in.position() == '\\')
+                {
+                    ++in.position();
+                    if (!eofWithSavingBufferState(in, memory, begin_pos))
+                        ++in.position();
+                }
+                else if (*in.position() == '"')
+                {
+                    ++in.position();
+                    quotes = false;
+                }
+            }
+            else
+            {
+                in.position() = find_first_symbols<'{', '}', '\\', '"'>(in.position(), in.buffer().end());
+                if (in.position() == in.buffer().end())
+                    continue;
+                if (*in.position() == '{')
+                {
+                    ++balance;
+                    ++in.position();
+                }
+                else if (*in.position() == '}')
+                {
+                    --balance;
+                    ++in.position();
+                }
+                else if (*in.position() == '\\')
+                {
+                    ++in.position();
+                    if (!eofWithSavingBufferState(in, memory, begin_pos))
+                        ++in.position();
+                }
+                else if (*in.position() == '"')
+                {
+                    quotes = true;
+                    ++in.position();
+                }
+            }
+        }
+        eofWithSavingBufferState(in, memory, begin_pos, true);
+        return true;
+    });
+}
+
 }

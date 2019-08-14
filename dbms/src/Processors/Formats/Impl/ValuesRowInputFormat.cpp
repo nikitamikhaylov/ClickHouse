@@ -9,6 +9,7 @@
 #include <Common/FieldVisitors.h>
 #include <Core/Block.h>
 #include <Common/typeid_cast.h>
+#include <common/find_symbols.h>
 
 
 namespace DB
@@ -160,6 +161,57 @@ void registerInputFormatProcessorValues(FormatFactory & factory)
         const FormatSettings & settings)
     {
         return std::make_shared<ValuesRowInputFormat>(buf, sample, std::move(params), context, settings);
+    });
+}
+
+void registerFileSegmentationEngineValues(FormatFactory & factory)
+{
+    factory.registerFileSegmentationEngine("Values", [](
+        ReadBuffer & in,
+        DB::Memory<> & memory,
+        size_t min_chunk_size)
+    {
+        skipWhitespaceIfAny(in);
+        if (in.eof() || *in.position() == ';')
+            return false;
+        char * begin_pos = in.position();
+        int balance = 0;
+        bool quoted = false;
+        memory.resize(0);
+        while (!eofWithSavingBufferState(in, memory, begin_pos)
+                && (balance || memory.size() + static_cast<size_t>(in.position() - begin_pos) < min_chunk_size))
+        {
+            in.position() = find_first_symbols<'\\', '\'', ')', '('>(in.position(), in.buffer().end());
+            if (in.position() == in.buffer().end())
+                continue;
+            if (*in.position() == '\\')
+            {
+                ++in.position();
+                if (!eofWithSavingBufferState(in, memory, begin_pos))
+                    ++in.position();
+            }
+            else if (*in.position() == '\'')
+            {
+                quoted ^= true;
+                ++in.position();
+            }
+            else if (*in.position() == ')')
+            {
+                ++in.position();
+                if (!quoted)
+                    --balance;
+            }
+            else if (*in.position() == '(')
+            {
+                ++in.position();
+                if (!quoted)
+                    ++balance;
+            }
+        }
+        eofWithSavingBufferState(in, memory, begin_pos, true);
+        if (!in.eof() && *in.position() == ',')
+            ++in.position();
+        return true;
     });
 }
 

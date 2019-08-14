@@ -1,3 +1,5 @@
+SET input_format_parallel_parsing=0;
+
 DROP TABLE IF EXISTS test.filtered_table1;
 DROP TABLE IF EXISTS test.filtered_table2;
 DROP TABLE IF EXISTS test.filtered_table3;
