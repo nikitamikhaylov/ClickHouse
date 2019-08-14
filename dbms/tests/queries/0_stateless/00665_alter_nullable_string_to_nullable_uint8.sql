@@ -1,5 +1,7 @@
-DROP TABLE IF EXISTS alter_00665;
-CREATE TABLE alter_00665 (`boolean_false` Nullable(String)) ENGINE = MergeTree ORDER BY tuple();
+SET input_format_parallel_parsing=0;
+
+DROP TABLE IF EXISTS alter;
+CREATE TABLE alter (`boolean_false` Nullable(String)) ENGINE = MergeTree ORDER BY tuple();
 
 INSERT INTO alter_00665 (`boolean_false`) VALUES (NULL), (''), ('123');
 SELECT * FROM alter_00665;

@@ -19,9 +19,10 @@ function pack_unpack_compare()
     ${CLICKHOUSE_CLIENT} --max_threads=1 --query "CREATE TABLE buf_file ENGINE = File($3) AS SELECT * FROM buf_00385"
     local res_db_file=$(${CLICKHOUSE_CLIENT} --max_threads=1 --query "SELECT $TABLE_HASH FROM buf_file")
 
-    ${CLICKHOUSE_CLIENT} --max_threads=1 --query "SELECT * FROM buf_00385 FORMAT $3" > "$buf_file"
-    local res_ch_local1=$(${CLICKHOUSE_LOCAL} --structure "$2" --file "$buf_file" --table "my super table" --input-format "$3" --output-format TabSeparated --query "SELECT $TABLE_HASH FROM \`my super table\`")
-    local res_ch_local2=$(${CLICKHOUSE_LOCAL} --structure "$2" --table "my super table" --input-format "$3" --output-format TabSeparated --query "SELECT $TABLE_HASH FROM \`my super table\`" < "$buf_file")
+    ${CLICKHOUSE_CLIENT} --max_threads=1 --query "SELECT * FROM buf FORMAT $3" > "$buf_file"
+    local res_ch_local1=$(${CLICKHOUSE_LOCAL} --input_format_parallel_parsing=0 --structure "$2" --file "$buf_file" --table "my super table" --input-format "$3" --output-format TabSeparated --query "SELECT $TABLE_HASH FROM \`my super table\`")
+    local res_ch_local2=$(${CLICKHOUSE_LOCAL} --input_format_parallel_parsing=0 --structure "$2" --table "my super table" --input-format "$3" --output-format TabSeparated --query "SELECT $TABLE_HASH FROM \`my super table\`" < "$buf_file")
+
 
     ${CLICKHOUSE_CLIENT} --query "DROP TABLE IF EXISTS buf_00385"
     ${CLICKHOUSE_CLIENT} --query "DROP TABLE IF EXISTS buf_file"

@@ -1,3 +1,5 @@
+SET input_format_parallel_parsing=0;
+
 SELECT '*** MergeTree ***';
 
 DROP TABLE IF EXISTS unsorted;

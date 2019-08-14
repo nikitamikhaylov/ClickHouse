@@ -501,4 +501,39 @@ void registerInputFormatTabSeparated(FormatFactory & factory)
     }
 }
 
+void registerFileSegmentationEngineTabSeparated(FormatFactory & factory)
+{
+    for (auto name : {"TabSeparated", "TSV"})
+    {
+        factory.registerFileSegmentationEngine(name, [](
+            ReadBuffer & in,
+            DB::Memory<> & memory,
+            size_t min_chunk_size)
+        {
+            char * begin_pos = in.position();
+            bool end_of_line = false;
+            memory.resize(0);
+            while (!eofWithSavingBufferState(in, memory, begin_pos)
+                    && (!end_of_line || memory.size() + static_cast<size_t>(in.position() - begin_pos) < min_chunk_size))
+            {
+                in.position() = find_first_symbols<'\\','\r', '\n'>(in.position(), in.buffer().end());
+                if (in.position() == in.buffer().end())
+                    continue;
+                if (*in.position() == '\\')
+                {
+                    ++in.position();
+                    if (!eofWithSavingBufferState(in, memory, begin_pos))
+                        ++in.position();
+                } else if (*in.position() == '\n' || *in.position() == '\r')
+                {
+                    end_of_line = true;
+                    ++in.position();
+                }
+            }
+            eofWithSavingBufferState(in, memory, begin_pos, true);
+            return true;
+        });
+    }
+}
+
 }

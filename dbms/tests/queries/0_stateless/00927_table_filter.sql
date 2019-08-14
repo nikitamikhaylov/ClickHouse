@@ -1,3 +1,4 @@
+SET input_format_parallel_parsing=0;
 SET any_join_distinct_right_table_keys = 1;
 
 DROP TABLE IF EXISTS test.filtered_table1;

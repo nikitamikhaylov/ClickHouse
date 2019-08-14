@@ -1,3 +1,4 @@
+SET input_format_parallel_parsing=0;
 SET enable_debug_queries = 1;
 
 DROP TABLE IF EXISTS t1_00849;

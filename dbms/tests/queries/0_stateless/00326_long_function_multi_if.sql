@@ -1,3 +1,4 @@
+SET input_format_parallel_parsing=0;
 
 SELECT 'Trivial case';
 

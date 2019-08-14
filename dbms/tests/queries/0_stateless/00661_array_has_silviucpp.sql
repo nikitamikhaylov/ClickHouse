@@ -1,3 +1,4 @@
+SET input_format_parallel_parsing=0;
 DROP TABLE IF EXISTS has_function;
 
 CREATE TABLE has_function(arr Array(Nullable(String))) ENGINE = Memory;

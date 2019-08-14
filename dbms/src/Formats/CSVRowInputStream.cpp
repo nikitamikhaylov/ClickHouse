@@ -572,4 +572,65 @@ void registerInputFormatCSV(FormatFactory & factory)
     }
 }
 
+void registerFileSegmentationEngineCSV(FormatFactory & factory)
+{
+    factory.registerFileSegmentationEngine("CSV", [](
+        ReadBuffer & in,
+        DB::Memory<> & memory,
+        size_t min_chunk_size)
+    {
+        skipWhitespacesAndTabs(in);
+        char * begin_pos = in.position();
+        bool quotes = false;
+        bool end_of_line = false;
+        memory.resize(0);
+        while (!eofWithSavingBufferState(in, memory, begin_pos)
+                && (!end_of_line || memory.size() + static_cast<size_t>(in.position() - begin_pos) < min_chunk_size))
+        {
+            if (quotes)
+            {
+                in.position() = find_first_symbols<'"'>(in.position(), in.buffer().end());
+                if (in.position() == in.buffer().end())
+                    continue;
+                if (*in.position() == '"')
+                {
+                    ++in.position();
+                    if (!eofWithSavingBufferState(in, memory, begin_pos) && *in.position() == '"')
+                        ++in.position();
+                    else
+                        quotes = false;
+                }
+            }
+            else
+            {
+                in.position() = find_first_symbols<'"','\r', '\n'>(in.position(), in.buffer().end());
+                if (in.position() == in.buffer().end())
+                    continue;
+                if (*in.position() == '"')
+                {
+                    quotes = true;
+                    ++in.position();
+                }
+                else if (*in.position() == '\n')
+                {
+                    end_of_line = true;
+                    ++in.position();
+                    if (!eofWithSavingBufferState(in, memory, begin_pos) && *in.position() == '\r')
+                        ++in.position();
+                }
+                else if (*in.position() == '\r')
+                {
+                    end_of_line = true;
+                    ++in.position();
+                    if (!eofWithSavingBufferState(in, memory, begin_pos) && *in.position() == '\n')
+                        ++in.position();
+                }
+            }
+        }
+        eofWithSavingBufferState(in, memory, begin_pos, true);
+        return true;
+    });
+}
+
+
 }
