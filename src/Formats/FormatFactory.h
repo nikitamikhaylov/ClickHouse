@@ -71,11 +71,13 @@ private:
         WriteCallback callback,
         const FormatSettings & settings)>;
 
-    using InputProcessorCreator = std::function<InputFormatPtr(
-            ReadBuffer & buf,
-            const Block & header,
-            const RowInputFormatParams & params,
-            const FormatSettings & settings)>;
+    using InputProcessorCreatorFunc = InputFormatPtr(
+        ReadBuffer & buf,
+        const Block & header,
+        const RowInputFormatParams & params,
+        const FormatSettings & settings);
+
+    using InputProcessorCreator = std::function<InputProcessorCreatorFunc>;
 
     using OutputProcessorCreator = std::function<OutputFormatPtr(
             WriteBuffer & buf,
@@ -98,7 +100,7 @@ public:
 
     static FormatFactory & instance();
 
-    BlockInputStreamPtr getInput(
+    InputFormatPtr getInput(
         const String & name,
         ReadBuffer & buf,
         const Block & sample,

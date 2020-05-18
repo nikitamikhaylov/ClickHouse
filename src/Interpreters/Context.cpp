@@ -15,6 +15,7 @@
 #include <Compression/ICompressionCodec.h>
 #include <Core/BackgroundSchedulePool.h>
 #include <Formats/FormatFactory.h>
+#include <Processors/Formats/InputStreamFromInputFormat.h>
 #include <Databases/IDatabase.h>
 #include <Storages/IStorage.h>
 #include <Storages/MarkCache.h>
@@ -1994,7 +1995,7 @@ void Context::checkPartitionCanBeDropped(const String & database, const String &
 
 BlockInputStreamPtr Context::getInputFormat(const String & name, ReadBuffer & buf, const Block & sample, UInt64 max_block_size) const
 {
-    return FormatFactory::instance().getInput(name, buf, sample, *this, max_block_size);
+    return std::make_shared<InputStreamFromInputFormat>(FormatFactory::instance().getInput(name, buf, sample, *this, max_block_size));
 }
 
 BlockOutputStreamPtr Context::getOutputFormat(const String & name, WriteBuffer & buf, const Block & sample) const
