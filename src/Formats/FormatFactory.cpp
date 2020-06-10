@@ -146,14 +146,6 @@ InputFormatPtr FormatFactory::getInput(
 
     if (!getCreators(name).input_processor_creator)
     {
-//        const auto & input_getter = getCreators(name).input_creator;
-//        if (!input_getter)
-//            throw Exception("Format " + name + " is not suitable for input", ErrorCodes::FORMAT_IS_NOT_SUITABLE_FOR_INPUT);
-//
-//        const Settings & settings = context.getSettingsRef();
-//        FormatSettings format_settings = getInputFormatSetting(settings, context);
-//
-//        return input_getter(buf, sample, max_block_size, callback ? callback : ReadCallback(), format_settings);
         throw;
     }
 
@@ -163,16 +155,6 @@ InputFormatPtr FormatFactory::getInput(
     // Doesn't make sense to use parallel parsing with less than four threads
     // (segmentator + two parsers + reader).
     bool parallel_parsing = settings.input_format_parallel_parsing && file_segmentation_engine && settings.max_threads >= 4;
-
-    if (parallel_parsing && name == "JSONEachRow")
-    {
-        /// FIXME ParallelParsingBlockInputStream doesn't support formats with non-trivial readPrefix() and readSuffix()
-
-        /// For JSONEachRow we can safely skip whitespace characters
-        skipWhitespaceIfAny(buf);
-        if (buf.eof() || *buf.position() == '[')
-            parallel_parsing = false; /// Disable it for JSONEachRow if data is in square brackets (see JSONEachRowRowInputFormat)
-    }
 
     if (parallel_parsing)
     {
@@ -190,25 +172,13 @@ InputFormatPtr FormatFactory::getInput(
         row_input_format_params.max_execution_time = settings.max_execution_time;
         row_input_format_params.timeout_overflow_mode = settings.timeout_overflow_mode;
 
-        auto parser_creator = std::bind(
-            input_getter.target<InputProcessorCreatorFunc>(),
-            std::placeholders::_1, sample, row_input_format_params, format_settings);
+        /// Const reference is copied to lambda.
+        auto parser_creator = [input_getter, sample, row_input_format_params, format_settings]
+            (ReadBuffer & input) -> InputFormatPtr
+            { return input_getter(input, sample, row_input_format_params, format_settings); };
 
-//        auto anime = parser_creator(buf)
-        auto boruto = input_getter(buf, sample, row_input_format_params, format_settings);
-//        auto naruto = input_getter.target<InputProcessorCreatorFunc>()(buf, sample, row_input_format_params, format_settings);
-
-        auto naruto =
-            [sample, row_input_format_params, format_settings, input_getter]
-            (ReadBuffer & input)
-            {return input_getter(input, sample, row_input_format_params, format_settings);};
-
-        auto aaa = naruto(buf);
-
-        ParallelParsingBlockInputFormat::Params params{buf, sample,
-            naruto, file_segmentation_engine,
-            settings.max_threads,
-            settings.min_chunk_bytes_for_parallel_parsing};
+        ParallelParsingBlockInputFormat::Params params{
+            buf, sample, parser_creator, file_segmentation_engine, name, settings.max_threads, settings.min_chunk_bytes_for_parallel_parsing};
         return std::make_shared<ParallelParsingBlockInputFormat>(params);
     }
 
