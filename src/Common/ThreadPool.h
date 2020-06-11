@@ -12,7 +12,6 @@
 #include <Poco/Event.h>
 #include <Common/ThreadStatus.h>
 
-
 /** Very simple thread pool similar to boost::threadpool.
   * Advantages:
   * - catches exceptions and rethrows on wait.
