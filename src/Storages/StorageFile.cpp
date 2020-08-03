@@ -327,7 +327,7 @@ public:
                 }
 
                 read_buf = wrapReadBufferWithCompressionMethod(std::move(nested_buffer), method);
-                reader = FormatFactory::instance().getInput(
+                auto format = FormatFactory::instance().getInput(
                         storage->format_name, *read_buf, metadata_snapshot->getSampleBlock(), context, max_block_size);
 
                 reader = std::make_shared<InputStreamFromInputFormat>(format);
