@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <cassert>
 #include <type_traits>
-#include <common/defines.h>
 
 
 /** Returns log2 of number, rounded down.
@@ -24,7 +23,7 @@ inline unsigned int bitScanReverse(unsigned int x)
 inline size_t roundUpToPowerOfTwoOrZero(size_t n)
 {
     // if MSB is set, return n, to avoid return zero
-    if (unlikely(n >= 0x8000000000000000ULL))
+    if ((n >= 0x8000000000000000ULL))
         return n;
 
     --n;

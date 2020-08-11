@@ -760,37 +760,16 @@ void CacheDictionary::updateThreadFunction()
         if (finished)
             break;
 
-        /// Here we pop as many unit pointers from update queue as we can.
-        /// We fix current size to avoid livelock (or too long waiting),
-        /// when this thread pops from the queue and other threads push to the queue.
-        const size_t current_queue_size = update_queue.size();
-
-        if (current_queue_size > 0)
-            LOG_TRACE(log, "Performing bunch of keys update in cache dictionary with "
-                            << current_queue_size + 1 << " keys");
-
-        std::vector<UpdateUnitPtr> update_request;
-        update_request.reserve(current_queue_size + 1);
-        update_request.emplace_back(first_popped);
-
-        UpdateUnitPtr current_unit_ptr;
-
-        while (update_request.size() < current_queue_size + 1 && update_queue.tryPop(current_unit_ptr))
-            update_request.emplace_back(std::move(current_unit_ptr));
-
-        BunchUpdateUnit bunch_update_unit(update_request);
-
         try
         {
             /// Update a bunch of ids.
-            update(bunch_update_unit);
+            update(first_popped);
 
             /// Notify all threads about finished updating the bunch of ids
             /// where their own ids were included.
             std::unique_lock<std::mutex> lock(update_mutex);
 
-            for (auto & unit_ptr: update_request)
-                unit_ptr->is_done = true;
+            first_popped->is_done = true;
 
             is_update_finished.notify_all();
         }
@@ -799,8 +778,7 @@ void CacheDictionary::updateThreadFunction()
             std::unique_lock<std::mutex> lock(update_mutex);
             /// It is a big trouble, because one bad query can make other threads fail with not relative exception.
             /// So at this point all threads (and queries) will receive the same exception.
-            for (auto & unit_ptr: update_request)
-                unit_ptr->current_exception = std::current_exception();
+            first_popped->current_exception = std::current_exception();
 
             is_update_finished.notify_all();
         }
@@ -848,13 +826,13 @@ void CacheDictionary::tryPushToUpdateQueueOrThrow(UpdateUnitPtr & update_unit_pt
                 std::to_string(update_queue.size()), ErrorCodes::CACHE_DICTIONARY_UPDATE_FAIL);
 }
 
-void CacheDictionary::update(BunchUpdateUnit & bunch_update_unit) const
+void CacheDictionary::update(UpdateUnitPtr & update_unit_ptr) const
 {
     CurrentMetrics::Increment metric_increment{CurrentMetrics::DictCacheRequests};
-    ProfileEvents::increment(ProfileEvents::DictCacheKeysRequested, bunch_update_unit.getRequestedIds().size());
+    ProfileEvents::increment(ProfileEvents::DictCacheKeysRequested, update_unit_ptr->requested_ids.size());
 
-    std::unordered_map<Key, UInt8> remaining_ids{bunch_update_unit.getRequestedIds().size()};
-    for (const auto id : bunch_update_unit.getRequestedIds())
+    std::unordered_map<Key, UInt8> remaining_ids{update_unit_ptr->requested_ids.size()};
+    for (const auto id : update_unit_ptr->requested_ids)
         remaining_ids.insert({id, 0});
 
     const auto now = std::chrono::system_clock::now();
@@ -868,7 +846,7 @@ void CacheDictionary::update(BunchUpdateUnit & bunch_update_unit) const
 
             Stopwatch watch;
 
-            BlockInputStreamPtr stream = current_source_ptr->loadIds(bunch_update_unit.getRequestedIds());
+            BlockInputStreamPtr stream = current_source_ptr->loadIds(update_unit_ptr->requested_ids);
             stream->readPrefix();
 
 
@@ -920,8 +898,7 @@ void CacheDictionary::update(BunchUpdateUnit & bunch_update_unit) const
                     else
                         cell.setExpiresAt(std::chrono::time_point<std::chrono::system_clock>::max());
 
-
-                    bunch_update_unit.informCallersAboutPresentId(id, cell_idx);
+                    update_unit_ptr->present_id_handler(id, cell_idx);
                     /// mark corresponding id as found
                     remaining_ids[id] = 1;
                 }
@@ -982,9 +959,9 @@ void CacheDictionary::update(BunchUpdateUnit & bunch_update_unit) const
                 if (was_default)
                     cell.setDefault();
                 if (was_default)
-                    bunch_update_unit.informCallersAboutAbsentId(id, cell_idx);
+                    update_unit_ptr->absent_id_handler(id, cell_idx);
                 else
-                    bunch_update_unit.informCallersAboutPresentId(id, cell_idx);
+                    update_unit_ptr->present_id_handler(id, cell_idx);
                 continue;
             }
             /// We don't have expired data for that `id` so all we can do is to rethrow `last_exception`.
@@ -1016,7 +993,7 @@ void CacheDictionary::update(BunchUpdateUnit & bunch_update_unit) const
             setDefaultAttributeValue(attribute, cell_idx);
 
         /// inform caller that the cell has not been found
-        bunch_update_unit.informCallersAboutAbsentId(id, cell_idx);
+        update_unit_ptr->absent_id_handler(id, cell_idx);
     }
 
     ProfileEvents::increment(ProfileEvents::DictCacheKeysRequestedMiss, not_found_num);

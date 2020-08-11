@@ -557,7 +557,7 @@ private:
      *
      */
     void updateThreadFunction();
-    void update(BunchUpdateUnit & bunch_update_unit) const;
+    void update(UpdateUnitPtr & update_unit_ptr) const;
 
 
     void tryPushToUpdateQueueOrThrow(UpdateUnitPtr & update_unit_ptr) const;
