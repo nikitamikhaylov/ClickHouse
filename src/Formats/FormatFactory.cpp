@@ -206,7 +206,8 @@ BlockOutputStreamPtr FormatFactory::getOutput(
                 output_getter(buf, sample, std::move(callback), format_settings), sample);
     }
 
-    bool parallel_formatting = true;
+    const Settings & settings = context.getSettingsRef();
+    bool parallel_formatting = settings.output_format_parallel_formatting;
 
     if (parallel_formatting)
     {
@@ -214,7 +215,6 @@ BlockOutputStreamPtr FormatFactory::getOutput(
         if (!output_getter)
             throw Exception("Format " + name + " is not suitable for output", ErrorCodes::FORMAT_IS_NOT_SUITABLE_FOR_OUTPUT);
 
-        const Settings & settings = context.getSettingsRef();
         FormatSettings format_settings = getOutputFormatSetting(settings, context);
 
         /** TODO: Materialization is needed, because formats can use the functions `IDataType`,
