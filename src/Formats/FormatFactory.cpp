@@ -146,7 +146,7 @@ InputFormatPtr FormatFactory::getInput(
 
     if (!getCreators(name).input_processor_creator)
     {
-        throw;
+        throw Exception("Format " + name + " is not suitable for input (with processors)", ErrorCodes::FORMAT_IS_NOT_SUITABLE_FOR_INPUT;;
     }
 
     const Settings & settings = context.getSettingsRef();
@@ -159,8 +159,6 @@ InputFormatPtr FormatFactory::getInput(
     if (parallel_parsing)
     {
         const auto & input_getter = getCreators(name).input_processor_creator;
-        if (!input_getter)
-            throw Exception("Format " + name + " is not suitable for input", ErrorCodes::FORMAT_IS_NOT_SUITABLE_FOR_INPUT);
 
         FormatSettings format_settings = getInputFormatSetting(settings, context);
 
@@ -192,18 +190,7 @@ BlockOutputStreamPtr FormatFactory::getOutput(
 {
     if (!getCreators(name).output_processor_creator)
     {
-        const auto & output_getter = getCreators(name).output_creator;
-        if (!output_getter)
-            throw Exception("Format " + name + " is not suitable for output", ErrorCodes::FORMAT_IS_NOT_SUITABLE_FOR_OUTPUT);
-
-        const Settings & settings = context.getSettingsRef();
-        FormatSettings format_settings = getOutputFormatSetting(settings, context);
-
-        /**  Materialization is needed, because formats can use the functions `IDataType`,
-          *  which only work with full columns.
-          */
-        return std::make_shared<MaterializingBlockOutputStream>(
-                output_getter(buf, sample, std::move(callback), format_settings), sample);
+        throw Exception("Format " + name + " is not suitable for output (with processors)", ErrorCodes::FORMAT_IS_NOT_SUITABLE_FOR_OUTPUT);
     }
 
     const Settings & settings = context.getSettingsRef();
@@ -212,8 +199,6 @@ BlockOutputStreamPtr FormatFactory::getOutput(
     if (parallel_formatting)
     {
         const auto & output_getter = getCreators(name).output_processor_creator;
-        if (!output_getter)
-            throw Exception("Format " + name + " is not suitable for output", ErrorCodes::FORMAT_IS_NOT_SUITABLE_FOR_OUTPUT);
 
         FormatSettings format_settings = getOutputFormatSetting(settings, context);
 
@@ -228,7 +213,7 @@ BlockOutputStreamPtr FormatFactory::getOutput(
 //        if (format_settings.enable_streaming)
 //            format->setAutoFlush();
 
-        ParallelFormattingOutputFormat::Params params{buf, sample, formatter_creator};
+        ParallelFormattingOutputFormat::Params params{buf, sample, formatter_creator, settings.max_threads};
         auto format = std::make_shared<ParallelFormattingOutputFormat>(params);
         return std::make_shared<MaterializingBlockOutputStream>(std::make_shared<OutputStreamToOutputFormat>(format), sample);
     }
