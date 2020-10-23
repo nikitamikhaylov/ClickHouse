@@ -280,8 +280,11 @@ std::optional<QueryProcessingStage::Enum> getOptimizedQueryProcessingStage(const
     // GROUP BY qualifiers
     // - TODO: WITH TOTALS can be implemented
     // - TODO: WITH ROLLUP can be implemented (I guess)
-    if (select.group_by_with_totals || select.group_by_with_rollup || select.group_by_with_cube)
-        return {};
+    if (select.group_by_with_totals || select.group_by_with_rollup || select.group_by_with_cube) {
+        // return {};
+        std::terminate();
+    }
+        
 
     // TODO: extremes support can be implemented
     if (extremes)

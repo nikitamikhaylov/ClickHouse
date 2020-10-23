@@ -160,6 +160,24 @@ bool Set::insertFromBlock(const Block & block)
 {
     std::unique_lock lock(rwlock);
 
+    std::cout << StackTrace().toString() << std::endl;
+
+    std::cout << "INSERT FROM BLOCK" << std::endl;
+
+    std::cout << block.dumpStructure() << std::endl;
+
+    for (const auto & column : block.getColumnsWithTypeAndName())
+    {
+        std::cout << column.name << "\t";
+        for (size_t i = 0; i < column.column->size(); ++i)
+        {
+            std::cout << toString(column.column->operator[](i)) << " \t";
+        }
+        std::cout << std::endl;
+    }
+
+    std::cout << "---------" << std::endl;
+
     if (empty())
         throw Exception("Method Set::setHeader must be called before Set::insertFromBlock", ErrorCodes::LOGICAL_ERROR);
 
@@ -217,6 +235,20 @@ bool Set::insertFromBlock(const Block & block)
 
 ColumnPtr Set::execute(const Block & block, bool negative) const
 {
+    std::cout << "Set:execute() !!!" << std::endl;
+
+    std::cout << block.dumpStructure() << std::endl;
+
+    for (const auto & column : block.getColumnsWithTypeAndName())
+    {
+        std::cout << column.name << "\t";
+        for (size_t i = 0; i < column.column->size(); ++i)
+        {
+            std::cout << toString(column.column->operator[](i)) << " \t";
+        }
+        std::cout << std::endl;
+    }
+
     size_t num_key_columns = block.columns();
 
     if (0 == num_key_columns)
@@ -234,6 +266,7 @@ ColumnPtr Set::execute(const Block & block, bool negative) const
     /// If the set is empty.
     if (data_types.empty())
     {
+        std::cout << "data_types.empty()" << std::endl;
         if (negative)
             memset(vec_res.data(), 1, vec_res.size());
         else

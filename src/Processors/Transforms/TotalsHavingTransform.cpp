@@ -8,6 +8,8 @@
 #include <DataStreams/finalizeBlock.h>
 #include <Interpreters/ExpressionActions.h>
 
+#include <common/logger_useful.h>
+
 namespace DB
 {
 namespace ErrorCodes
@@ -54,6 +56,11 @@ TotalsHavingTransform::TotalsHavingTransform(
     , auto_include_threshold(auto_include_threshold_)
     , final(final_)
 {
+
+    std::cout << "TotalsHavingTransform constructor " << StackTrace().toString() << std::endl;
+
+    std::cout << expression_->dumpActions() << std::endl;
+
     if (!filter_column_name.empty())
         filter_column_pos = outputs.front().getHeader().getPositionByName(filter_column_name);
 
@@ -82,6 +89,7 @@ TotalsHavingTransform::TotalsHavingTransform(
 
 IProcessor::Status TotalsHavingTransform::prepare()
 {
+    std::cout << "TotalsHavingTransform::prepare begin" << std::endl;
     if (!finished_transform)
     {
         auto status = ISimpleTransform::prepare();
@@ -104,6 +112,8 @@ IProcessor::Status TotalsHavingTransform::prepare()
     if (!totals)
         return Status::Ready;
 
+    std::cout << "TotalsHavingTransform::prepare() " << totals.dumpStructure() << std::endl;
+
     totals_output.push(std::move(totals));
     totals_output.finish();
     return Status::Finished;
@@ -119,6 +129,7 @@ void TotalsHavingTransform::work()
 
 void TotalsHavingTransform::transform(Chunk & chunk)
 {
+    std::cout << "TotalsHavingTransform::transform() " << chunk.dumpStructure() << std::endl;
     /// Block with values not included in `max_rows_to_group_by`. We'll postpone it.
     if (overflow_row)
     {
@@ -156,10 +167,35 @@ void TotalsHavingTransform::transform(Chunk & chunk)
         /// Compute the expression in HAVING.
         const auto & cur_header = final ? finalized_header : getInputPort().getHeader();
         auto finalized_block = cur_header.cloneWithColumns(finalized.detachColumns());
+
+        std::cout << "-------" << std::endl;
+        std::cout << finalized_block.dumpStructure() << std::endl;
+
+        for (const auto & column : finalized_block.getColumnsWithTypeAndName())
+        {
+            std::cout << column.name << "\t";
+            for (size_t i = 0; i < column.column->size(); ++i)
+            {
+                std::cout << toString(column.column->operator[](i)) << " \t";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << "-------" << std::endl;
+
+        std::cout << "expression " << expression->dumpActions() << std::endl;
+
+        LOG_FATAL(&Poco::Logger::get("TotalsHavingTransform::transform"), "expression->execute()");
         expression->execute(finalized_block);
         auto columns = finalized_block.getColumns();
-
+        
         ColumnPtr filter_column_ptr = columns[filter_column_pos];
+        std::cout << "Filter column ptr" << std::endl;
+        std::cout << "column size " << columns.size() << std::endl;
+        std::cout << "filter column pos " << filter_column_pos << std::endl;
+        std::cout << filter_column_ptr->dumpStructure() << std::endl;
+        for (size_t i = 0; i < filter_column_ptr->size(); ++i) {
+            std::cout << filter_column_ptr->operator[](i).dump() << std::endl;
+        }
         ConstantFilterDescription const_filter_description(*filter_column_ptr);
 
         if (const_filter_description.always_true)
@@ -190,9 +226,19 @@ void TotalsHavingTransform::transform(Chunk & chunk)
         /// Filter the block by expression in HAVING.
         for (auto & column : columns)
         {
+            std::cout << "TotalsHavingTransform::transform() filtering" << std::endl;
+            std::cout << column->dumpStructure() << std::endl;
+            for (size_t i = 0; i < column->size(); ++i) {
+                std::cout << column->operator[](i).dump() << std::endl;
+            }
+            for (auto filt : *filter_description.data) {
+                std::cout << filt << ' ';
+            }
+            std::cout << std::endl;
             column = column->filter(*filter_description.data, -1);
             if (column->empty())
             {
+                std::cout << "Clear chunk" << std::endl;
                 chunk.clear();
                 return;
             }

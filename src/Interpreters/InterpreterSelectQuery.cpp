@@ -225,6 +225,7 @@ InterpreterSelectQuery::InterpreterSelectQuery(
     , log(&Poco::Logger::get("InterpreterSelectQuery"))
     , metadata_snapshot(metadata_snapshot_)
 {
+    LOG_FATAL(&Poco::Logger::get("InterpreterSelectQuery"), "Constructor");
     checkStackSize();
 
     initSettings();
@@ -979,13 +980,21 @@ void InterpreterSelectQuery::executeImpl(QueryPlan & query_plan, const BlockInpu
                     if (query.group_by_with_totals)
                     {
                         bool final = !query.group_by_with_rollup && !query.group_by_with_cube;
+                        std::cout << "InterpreterSelectQuery" << std::endl;
+                        std::cout << expressions.before_having->dumpActions() << std::endl;
+                        LOG_FATAL(&Poco::Logger::get("InterpreterSelectQuery"), "expressions.second_stage " + std::to_string(expressions.second_stage));
                         executeTotalsAndHaving(query_plan, expressions.hasHaving(), expressions.before_having, aggregate_overflow_row, final);
                     }
 
-                    if (query.group_by_with_rollup)
+                    if (query.group_by_with_rollup) {
+                        std::cout << "executeRollupOrCube(query_plan, Modificator::ROLLUP);" << std::endl;
                         executeRollupOrCube(query_plan, Modificator::ROLLUP);
-                    else if (query.group_by_with_cube)
+                    } 
+                    else if (query.group_by_with_cube) {
+                        std::cout << "executeRollupOrCube(query_plan, Modificator::CUBE);" << std::endl;
                         executeRollupOrCube(query_plan, Modificator::CUBE);
+                    }
+                        
 
                     if ((query.group_by_with_rollup || query.group_by_with_cube) && expressions.hasHaving())
                     {

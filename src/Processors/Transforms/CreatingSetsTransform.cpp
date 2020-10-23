@@ -43,6 +43,7 @@ void CreatingSetsTransform::work()
 
 void CreatingSetsTransform::startSubquery()
 {
+    // std::cout << StackTrace().toString() << std::endl;
     if (subquery.set)
         LOG_TRACE(log, "Creating set.");
     if (subquery.join)
@@ -70,8 +71,12 @@ void CreatingSetsTransform::finishSubquery()
     {
         auto seconds = watch.elapsedNanoseconds() / 1e9;
 
-        if (subquery.set)
+        if (subquery.set) {
+            std::cout << "set->empty() " << subquery.set->empty() << std::endl;
+            std::cout << "set->getTotalRowCount() " << subquery.set->getTotalRowCount() << std::endl;
+            std::cout << "size " << subquery.set->getSetElements().size() << std::endl;
             LOG_DEBUG(log, "Created Set with {} entries from {} rows in {} sec.", subquery.set->getTotalRowCount(), read_rows, seconds);
+        }
         if (subquery.join)
             LOG_DEBUG(log, "Created Join with {} entries from {} rows in {} sec.", subquery.join->getTotalRowCount(), read_rows, seconds);
         if (subquery.table)

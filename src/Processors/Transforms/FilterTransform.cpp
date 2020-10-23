@@ -109,6 +109,8 @@ void FilterTransform::transform(Chunk & chunk)
         columns = block.getColumns();
     }
 
+    std::cout << "FilterTransform::transform() " << on_totals << std::endl;
+
     if (constant_filter_description.always_true || on_totals)
     {
         chunk.setColumns(std::move(columns), num_rows_before_filtration);

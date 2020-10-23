@@ -34,6 +34,8 @@ public:
         : log(&Poco::Logger::get("Set")),
         limits(limits_), fill_set_elements(fill_set_elements_), transform_null_in(transform_null_in_)
     {
+      std::cout << "Constructor Set " << std::endl;
+      std::cout << StackTrace().toString() << std::endl;
     }
 
     bool empty() const { return data.empty(); }

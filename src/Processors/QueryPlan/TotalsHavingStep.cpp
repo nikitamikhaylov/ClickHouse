@@ -43,6 +43,8 @@ TotalsHavingStep::TotalsHavingStep(
     , auto_include_threshold(auto_include_threshold_)
     , final(final_)
 {
+    std::cout << "TotalsHavingSTEP " << std::endl;
+    std::cout << StackTrace().toString() << std::endl;
 }
 
 void TotalsHavingStep::transformPipeline(QueryPipeline & pipeline)

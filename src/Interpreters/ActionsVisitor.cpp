@@ -338,6 +338,7 @@ SetPtr makeExplicitSet(
     const ASTFunction * node, const ActionsDAG & actions, bool create_ordered_set,
     const Context & context, const SizeLimits & size_limits, PreparedSets & prepared_sets)
 {
+    std::cout << "makeExplicitSet" << std::endl;
     const IAST & args = *node->arguments;
 
     if (args.children.size() != 2)

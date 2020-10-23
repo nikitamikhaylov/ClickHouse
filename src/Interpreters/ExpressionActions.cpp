@@ -18,6 +18,10 @@
 #include <Columns/ColumnSet.h>
 #include <queue>
 
+#include <common/logger_useful.h>
+#include <Core/Field.h>
+#include <Functions/FunctionHelpers.h>
+
 #if !defined(ARCADIA_BUILD)
 #    include "config_core.h"
 #endif
@@ -92,6 +96,25 @@ ExpressionAction ExpressionAction::applyFunction(
 ExpressionAction ExpressionAction::addColumn(
     const ColumnWithTypeAndName & added_column_)
 {
+    using DB::toString;
+    std::string s;
+    for (size_t i = 0; i < added_column_.column->size(); ++i)
+    {
+        s += toString(added_column_.column->operator[](i));
+        s += " ";
+    }
+    const ColumnSet * column_set = checkAndGetColumnConstData<const ColumnSet>(added_column_.column.get());
+    if (!column_set)
+        column_set = checkAndGetColumn<const ColumnSet>(added_column_.column.get());
+    if (column_set) {
+        LOG_FATAL(&Poco::Logger::get("ExpressionAction::addColumn"), column_set->getName());
+        if (!column_set->getData()) {
+            LOG_FATAL(&Poco::Logger::get("ExpressionAction::addColumn"), "ColumnSet Nullptr");
+        } else {
+            LOG_FATAL(&Poco::Logger::get("ExpressionAction::addColumn"), std::to_string(column_set->getData()->isCreated()));
+        }
+    }
+    
     ExpressionAction a;
     a.type = ADD_COLUMN;
     a.result_name = added_column_.name;
@@ -201,10 +224,14 @@ void ExpressionAction::prepare(Block & sample_block, const Settings & settings, 
             /// so we don't want to unfold non deterministic functions
             if (all_const && function_base->isSuitableForConstantFolding() && (!compile_expressions || function_base->isDeterministic()))
             {
-                if (added_column)
+                if (added_column) {
+                    LOG_FATAL(&Poco::Logger::get("ExpressionAction::prepare"), "added_column");
                     sample_block.getByPosition(result_position).column = added_column;
-                else
+                }
+                else {
+                    LOG_FATAL(&Poco::Logger::get("ExpressionAction::prepare"), "NOT ADDED COLUMN");
                     sample_block.getByPosition(result_position).column = function->execute(arguments, result_type, sample_block.rows(), true);
+                }
 
                 /// If the result is not a constant, just in case, we will consider the result as unknown.
                 ColumnWithTypeAndName & col = sample_block.safeGetByPosition(result_position);

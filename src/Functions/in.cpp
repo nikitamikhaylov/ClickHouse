@@ -15,6 +15,7 @@ namespace DB
 namespace ErrorCodes
 {
     extern const int ILLEGAL_COLUMN;
+    extern const int LOGICAL_ERROR;
 }
 
 namespace
@@ -121,6 +122,9 @@ public:
         }
         else
             columns_of_key_columns.insert(left_arg);
+
+        // if (!set->isCreated()) 
+        //     throw Exception("Trying to filter with Set before its creation", ErrorCodes::LOGICAL_ERROR);      
 
         return set->execute(columns_of_key_columns, negative);
     }
