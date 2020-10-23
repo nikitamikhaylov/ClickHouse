@@ -959,8 +959,8 @@ void InterpreterSelectQuery::executeImpl(QueryPlan & query_plan, const BlockInpu
             preliminary_sort();
 
             // If there is no global subqueries, we can run subqueries only when receive them on server.
-            if (!query_analyzer->hasGlobalSubqueries() && !subqueries_for_sets.empty())
-                executeSubqueriesInSetsAndJoins(query_plan, subqueries_for_sets);
+            // if (!query_analyzer->hasGlobalSubqueries() && !subqueries_for_sets.empty())
+            executeSubqueriesInSetsAndJoins(query_plan, subqueries_for_sets);
         }
 
         if (expressions.second_stage || from_aggregation_stage)
@@ -1080,8 +1080,8 @@ void InterpreterSelectQuery::executeImpl(QueryPlan & query_plan, const BlockInpu
         }
     }
 
-    if (query_analyzer->hasGlobalSubqueries() && !subqueries_for_sets.empty())
-        executeSubqueriesInSetsAndJoins(query_plan, subqueries_for_sets);
+    // if (query_analyzer->hasGlobalSubqueries() && !subqueries_for_sets.empty())
+    executeSubqueriesInSetsAndJoins(query_plan, subqueries_for_sets);
 }
 
 static StreamLocalLimits getLimitsForStorage(const Settings & settings, const SelectQueryOptions & options)

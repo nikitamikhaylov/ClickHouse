@@ -141,8 +141,14 @@ void CreatingSetsTransform::consume(Chunk chunk)
 
 Chunk CreatingSetsTransform::generate()
 {
-    if (subquery.set)
+    if (subquery.set) {
+        auto * address = const_cast<Set *>(subquery.set.get());
+
+        void * pure_address = address;
+        LOG_FATAL(&Poco::Logger::get("CreatingSetsTransform::generate()"), std::to_string(static_cast<size_t>(reinterpret_cast<uintptr_t>(pure_address))));    
         subquery.set->finishInsert();
+    }
+        
 
     if (table_out)
         table_out->writeSuffix();

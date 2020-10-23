@@ -123,6 +123,7 @@ ExpressionAnalyzer::ExpressionAnalyzer(
     , subquery_depth(subquery_depth_)
     , syntax(syntax_analyzer_result_)
 {
+    LOG_FATAL(&Poco::Logger::get("ExpressionAnalyzer"), StackTrace().toString());
     subqueries_for_sets = std::move(subqueries_for_sets_);
 
     /// external_tables, subqueries_for_sets for global subqueries.

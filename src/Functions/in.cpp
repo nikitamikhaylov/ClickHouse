@@ -124,7 +124,11 @@ public:
             columns_of_key_columns.insert(left_arg);
 
         // if (!set->isCreated()) 
-        //     throw Exception("Trying to filter with Set before its creation", ErrorCodes::LOGICAL_ERROR);      
+        //     throw Exception("Trying to filter with Set before its creation", ErrorCodes::LOGICAL_ERROR);  
+
+        auto * address = const_cast<Set *>(column_set->getData().get());
+        void * pure_address = address;
+        LOG_FATAL(&Poco::Logger::get("IN"), std::to_string(static_cast<size_t>(reinterpret_cast<uintptr_t>(pure_address))));    
 
         return set->execute(columns_of_key_columns, negative);
     }
